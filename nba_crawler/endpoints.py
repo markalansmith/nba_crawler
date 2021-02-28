@@ -42,7 +42,9 @@ async def get_nba_games(
 
     day_game_ids = {
         pd.to_datetime(game_day).strftime("%Y%m%d"): set(game["game_id"] for game in games_on_day)
-        for game_day, games_on_day in itertools.groupby(all_games, lambda x: x["game_date"])
+        for game_day, games_on_day in itertools.groupby(
+            sorted(all_games, key=lambda x: x["game_date"]), lambda x: x["game_date"]
+        )
     }
     return day_game_ids
 

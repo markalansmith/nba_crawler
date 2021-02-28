@@ -24,6 +24,7 @@ class Crawler:
         try:
             logger.info(f"Retrieving win probability for game {game_id} on {game_day}")
             win_prob_result = await endpoints.get_win_probability(session, self.headers, game_id)
+            logger.info(f"Retrieved win probability for game {game_id} on {game_day}")
 
             win_prob = win_prob_result.get("WinProbPBP", None)
             if win_prob is not None:
@@ -43,10 +44,10 @@ class Crawler:
     async def crawl(self, start_day, end_day, loop=None):
         logger.info(f"Crawling data from {start_day} to {end_day}")
         async with aiohttp.ClientSession(connector=self.connector, timeout=self.timeout) as session:
-            game_ids = await endpoints.get_nba_games(session, self.headers, start_day, end_day, request_delay_secs=1)
+            nba_games = await endpoints.get_nba_games(session, self.headers, start_day, end_day, request_delay_secs=1)
             win_prob_reqs = [
                 self._crawl_win_probability(session, game_id, game_day, self.destination)
-                for game_day, game_ids in game_ids.items()
+                for game_day, game_ids in nba_games.items()
                 for game_id in game_ids
             ]
             await asyncio.gather(*win_prob_reqs)
@@ -82,7 +83,16 @@ def crawl() -> None:
     help="Location of output directory",
     required=True,
 )
-def game_day(start_date, end_date, output_path):
+@click.option(
+    "-t",
+    "--timeout",
+    type=int,
+    default=60,
+    help="Client Timeout in Seconds",
+    required=True,
+    show_default=True,
+)
+def game_day(start_date, end_date, output_path, timeout):
     logger.info(f"Crawling game-day from {start_date} to {end_date}. Results are in {output_path}")
 
     loop = asyncio.get_event_loop()
@@ -95,7 +105,7 @@ def game_day(start_date, end_date, output_path):
             day_path = output_path / day / endpoint
             day_path.mkdir(exist_ok=True, parents=True)
 
-    crawler = Crawler(output_path)
+    crawler = Crawler(output_path, client_timeout_seconds=timeout)
     loop.run_until_complete(crawler.crawl(start_date, end_date, loop=loop))
     loop.close()
 
