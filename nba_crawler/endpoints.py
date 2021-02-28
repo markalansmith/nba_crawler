@@ -1,7 +1,7 @@
 import asyncio
 import datetime
 import itertools
-from typing import Dict, Optional, Set, Tuple
+from typing import Dict, Optional, Set
 
 import aiohttp
 import pandas as pd
